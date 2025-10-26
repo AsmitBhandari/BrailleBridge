@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/input'
 import { Label } from '../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Separator } from '../../components/ui/separator'
-import { Home, FileText, History, User, Search, ChevronLeft, ChevronRight, Eye, Download, Play, Pause, Square, Volume2, VolumeX } from 'lucide-react'
+import { Home, FileText, History, User, Search, ChevronLeft, ChevronRight, Eye, Download, Play, Pause, Square, Volume2, VolumeX, Trash2 } from 'lucide-react'
 import axios from 'axios'
 
 const HistoryPage = () => {
@@ -33,6 +33,7 @@ const HistoryPage = () => {
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
   const [currentAudioUrl, setCurrentAudioUrl] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
   
   const documentsPerPage = 20
 
@@ -229,6 +230,29 @@ const HistoryPage = () => {
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage)
+  }
+
+  const handleDeleteDocument = async (docId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/documents/${docId}`, axiosConfig)
+      
+      // Remove from documents list
+      setDocuments(prev => prev.filter(doc => doc.id !== docId))
+      
+      // Update total count
+      setTotalDocuments(prev => prev - 1)
+      
+      // If the deleted document is currently displayed, close the modal
+      if (selectedDocument && selectedDocument.id === docId) {
+        setSelectedDocument(null)
+        handleStopAudio()
+      }
+      
+      setDeleteConfirm(null)
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete document. Please try again.')
+    }
   }
 
   const formatDate = (dateString) => {
@@ -435,6 +459,16 @@ const HistoryPage = () => {
                           <span>Audio</span>
                         </Button>
                       )}
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setDeleteConfirm(doc)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center space-x-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Delete</span>
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -700,6 +734,50 @@ const HistoryPage = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full shadow-2xl">
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-red-100 p-2 rounded-full">
+                    <Trash2 className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Delete Document</h3>
+                    <p className="text-sm text-gray-600">This action cannot be undone</p>
+                  </div>
+                </div>
+                
+                <div className="mb-6">
+                  <p className="text-gray-700">
+                    Are you sure you want to delete <strong>"{deleteConfirm.title}"</strong>?
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    This will permanently delete the document, all associated files, and audio from the server.
+                  </p>
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteConfirm(null)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleDeleteDocument(deleteConfirm.id)}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Delete
+                  </Button>
                 </div>
               </div>
             </div>

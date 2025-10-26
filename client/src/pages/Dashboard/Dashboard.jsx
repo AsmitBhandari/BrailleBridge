@@ -9,7 +9,7 @@ import { Label } from '../../components/ui/label'
 import { Textarea } from '../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Separator } from '../../components/ui/separator'
-import { Play, Pause, Square, Volume2, VolumeX, Home, FileText, History, User } from 'lucide-react'
+import { Play, Pause, Square, Volume2, VolumeX, Home, FileText, History, User, Maximize2, Minimize2, Trash2 } from 'lucide-react'
 import axios from 'axios'
 
 const Dashboard = () => {
@@ -32,6 +32,9 @@ const Dashboard = () => {
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
+  const [isTextFullscreen, setIsTextFullscreen] = useState(false)
+  const [isBrailleFullscreen, setIsBrailleFullscreen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   // API configuration
   const API_BASE_URL = 'http://localhost:8000/api'
@@ -278,6 +281,25 @@ const Dashboard = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
+  const handleDeleteDocument = async (docId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/documents/${docId}`, axiosConfig)
+      
+      // Remove from recent documents
+      setRecentDocuments(prev => prev.filter(doc => doc.id !== docId))
+      
+      // If the deleted document is currently displayed, clear the result
+      if (result && result.id === docId) {
+        setResult(null)
+      }
+      
+      setDeleteConfirm(null)
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete document. Please try again.')
+    }
+  }
+
   const handleLogout = () => {
     dispatch(logoutUser())
     // Clear local state
@@ -442,29 +464,59 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {result ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium">Original Text</Label>
-                    <Textarea 
-                      value={result.originalText} 
-                      readOnly 
-                      className="mt-1"
-                      rows={4}
-                    />
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <Label className="text-sm font-medium">Braille Translation</Label>
-                    <Textarea 
-                      value={result.brailleText} 
-                      readOnly 
-                      className="mt-1 font-mono"
-                      rows={4}
-                    />
-                  </div>
+                  {result ? (
+                    <div className="space-y-6">
+                      {/* Original Text Section */}
+                      <div className="border rounded-lg">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
+                          <Label className="text-sm font-medium flex items-center">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Original Text
+                          </Label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsTextFullscreen(true)}
+                            className="flex items-center space-x-1"
+                          >
+                            <Maximize2 className="h-4 w-4" />
+                            <span>Fullscreen</span>
+                          </Button>
+                        </div>
+                        <div className="p-3">
+                          <div className="bg-gray-50 border rounded-md p-3 max-h-64 overflow-y-auto">
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                              {result.originalText}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Braille Translation Section */}
+                      <div className="border rounded-lg">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
+                          <Label className="text-sm font-medium flex items-center">
+                            <span className="mr-2">⠃</span>
+                            Braille Translation
+                          </Label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsBrailleFullscreen(true)}
+                            className="flex items-center space-x-1"
+                          >
+                            <Maximize2 className="h-4 w-4" />
+                            <span>Fullscreen</span>
+                          </Button>
+                        </div>
+                        <div className="p-3">
+                          <div className="bg-gray-50 border rounded-md p-3 max-h-64 overflow-y-auto">
+                            <p className="text-sm font-mono leading-relaxed whitespace-pre-wrap">
+                              {result.brailleText}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
 
                   <div className="flex space-x-2">
                     <Button 
@@ -631,6 +683,15 @@ const Dashboard = () => {
                       >
                         View
                       </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setDeleteConfirm(doc)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -642,6 +703,110 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Text Fullscreen Modal */}
+        {isTextFullscreen && result && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+              <div className="flex items-center justify-between p-4 bg-gray-50 border-b">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Original Text - Fullscreen
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTextFullscreen(false)}
+                  className="flex items-center space-x-1"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                  <span>Exit Fullscreen</span>
+                </Button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <div className="bg-gray-50 border rounded-lg p-6">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {result.originalText}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Braille Fullscreen Modal */}
+        {isBrailleFullscreen && result && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+              <div className="flex items-center justify-between p-4 bg-gray-50 border-b">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <span className="mr-2">⠃</span>
+                  Braille Translation - Fullscreen
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsBrailleFullscreen(false)}
+                  className="flex items-center space-x-1"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                  <span>Exit Fullscreen</span>
+                </Button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <div className="bg-gray-50 border rounded-lg p-6">
+                  <p className="text-sm font-mono leading-relaxed whitespace-pre-wrap">
+                    {result.brailleText}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full shadow-2xl">
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-red-100 p-2 rounded-full">
+                    <Trash2 className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Delete Document</h3>
+                    <p className="text-sm text-gray-600">This action cannot be undone</p>
+                  </div>
+                </div>
+                
+                <div className="mb-6">
+                  <p className="text-gray-700">
+                    Are you sure you want to delete <strong>"{deleteConfirm.title}"</strong>?
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    This will permanently delete the document, all associated files, and audio from the server.
+                  </p>
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteConfirm(null)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleDeleteDocument(deleteConfirm.id)}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

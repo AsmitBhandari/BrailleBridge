@@ -76,7 +76,7 @@ const BrailleBridgePage = () => {
                                     </Button>
                                 </Link>
                                 <Link to="/auth/login">
-                                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
+                                    <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
                                         Sign In
                                     </Button>
                                 </Link>
@@ -169,7 +169,7 @@ const BrailleBridgePage = () => {
                             </p>
                         </div>
                 </Section>
-                </div>
+            </div>
             </div>
 
             {/* Team Section */}
